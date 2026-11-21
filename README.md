@@ -28,6 +28,8 @@ Install
 Run
   Normal:  SurvivingMars.app (double-click) or Contents/MacOS/launch.sh
   Verbose: Contents/MacOS/launch.sh --debug
+  Settings (game folder, log folder): Contents/MacOS/launch.sh --settings
+  If the game folder is missing at launch, a picker dialog asks you to locate it.
 
 Logs
   ~/Library/Logs/SurvivingMars/launch-YYYYMMDD-HHMMSS.log (+ latest.log symlink).
