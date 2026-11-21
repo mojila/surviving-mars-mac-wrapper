@@ -11,7 +11,7 @@
 set -u
 
 WINE_BIN="/Applications/Game Porting Toolkit.app/Contents/Resources/wine/bin/wine64"
-GAME_DIR="/Volumes/External/Surviving Mars - Relaunched [FitGirl Repack]/Surviving Mars - Relaunched"
+GAME_DIR="/Volumes/External/Surviving Mars - Relaunched/Surviving Mars - Relaunched"
 SUPPORT="$HOME/Library/Application Support/SurvivingMars"
 PREFIX="$SUPPORT/prefix"
 SAVES="$SUPPORT/saves"
