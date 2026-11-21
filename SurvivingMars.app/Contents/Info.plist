@@ -10,6 +10,8 @@
   <string>SurvivingMars</string>
   <key>CFBundleDisplayName</key>
   <string>Surviving Mars Relaunched</string>
+  <key>CFBundleIconFile</key>
+  <string>icon</string>
   <key>CFBundleVersion</key>
   <string>0.1.0</string>
   <key>CFBundleShortVersionString</key>

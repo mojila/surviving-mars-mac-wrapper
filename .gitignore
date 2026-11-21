@@ -12,6 +12,9 @@ steam_api*.dll
 *.rne
 unins000.*
 
+# Extracted game artwork stays local-only (copyrighted, never commit)
+SurvivingMars.app/Contents/Resources/icon.icns
+
 # Game directories (FitGirl/repack layout)
 Packs/
 Movies/
