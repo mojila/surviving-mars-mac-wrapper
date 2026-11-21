@@ -1,0 +1,4 @@
+# wrapper.conf - user overrides, sourced by launch.sh
+# Uncomment and edit if paths change:
+# GAME_DIR="/Volumes/External/Surviving Mars - Relaunched [FitGirl Repack]/Surviving Mars - Relaunched"
+# WINE_BIN="/Applications/Game Porting Toolkit.app/Contents/Resources/wine/bin/wine64"

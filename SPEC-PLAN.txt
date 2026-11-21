@@ -1,0 +1,86 @@
+Surviving Mars Relaunched - macOS Wrapper SPEC + PLAN
+Date: 2026-11-21 | Host: Mac mini M6, macOS 27.2.1, arm64, 16 GB, Metal 4, Rosetta on
+Game source: /Volumes/External/Surviving Mars - Relaunched [FitGirl Repack]/Surviving Mars - Relaunched (11 GB)
+
+1. VERIFIED FACTS
+  - Mars.exe and MarsDebug.exe: PE32+ x86-64 Windows GUI.
+  - DX12 title: D3D12Core.dll, d3d12SDKLayers.dll, dxcompiler.dll, dxil.dll in folder.
+  - Upscalers bundled: nvngx_dlss.dll (NVIDIA, will no-op on Apple Silicon), libxess.dll (Intel XeSS).
+  - Steam emu: RUNE steam_api64.dll, steam_emu.ini AppId 3215050, DLC entries 3889420/3889430/3889470, saves at drive_c/users/Public/Documents/Steam/RUNE/3215050.
+  - _Redist has vc_redist.x64.exe + vc_redist.x86.exe (needed once) and dxwebsetup.exe (skip, GPTK provides DX).
+  - External volume is exFAT (noowners, no symlinks). Wine prefix MUST live on internal APFS.
+  - Installed: Game Porting Toolkit 3.0-3 (/Applications/Game Porting Toolkit.app), Porting Kit 6.7.0, brew wine64 = wine-7.7 GPTK 1.1 (too old, do not use for runtime).
+  - Internal disk free: 27 GB. Prefix budget: 3-6 GB. Logs: small, rotated.
+  - Accidental default prefix ~/.wine was created during probing; real prefix will be isolated elsewhere so it is unaffected.
+
+2. GOAL
+  Double-clickable SurvivingMars.app that feels native on M6 (Dock icon, Retina window, Cmd-Q quit, persistent saves), runs the DX12 build via D3DMetal with no first-run errors, and on any failure leaves a log that pinpoints the cause without re-running.
+
+3. NON-GOALS
+  No multiplayer/overlay support. No DLSS on Apple Silicon (fallback expected). No copying the full 11 GB game to internal disk unless USB streaming stutters.
+
+4. DECISION
+  Runtime: Game Porting Toolkit 3.0-3 wine64 at /Applications/Game Porting Toolkit.app/Contents/Resources/wine/bin/wine64 with D3DMetal.
+  Why: only path with DX12 -> Metal on Apple Silicon. Brew wine 7.7 lacks current D3DMetal. Porting Kit 6.7.0 is fallback only. No VM (heavy, non-native feel).
+  Launch Mars.exe for play. MarsDebug.exe only for diagnosed dev runs.
+
+5. ARCHITECTURE AND PATHS (all APFS internal except game dir)
+  App:        /Applications/SurvivingMars.app (final) ; staging in ~/Documents/SurvivingMars-Wrapper/SurvivingMars.app
+  Launcher:   Contents/MacOS/launch.sh (executable shell, CFBundleExecutable)
+  Prefix:     ~/Library/Application Support/SurvivingMars/prefix (WINEPREFIX)
+  Game:       /Volumes/External/Surviving Mars - Relaunched [FitGirl Repack]/Surviving Mars - Relaunched/Mars.exe (referenced, not moved)
+  Saves link: prefix/drive_c/users/Public/Documents/Steam/RUNE/3215050 <-> ~/Library/Application Support/SurvivingMars/saves
+  Logs:       ~/Library/Logs/SurvivingMars/launch-YYYYMMDD-HHMMSS.log + latest.log symlink
+  Config:     ~/Library/Application Support/SurvivingMars/wrapper.conf (game path, wine path, debug flag)
+  Icon:       Contents/Resources/icon.icns (staged; final art later)
+
+6. LAUNCHER BEHAVIOR
+  On start:
+    1. Check /Volumes/External mounted and Mars.exe exists. If not, error dialog + log, exit 10.
+    2. Check wine binary exists. If not, exit 11.
+    3. Ensure prefix exists; if missing, wineboot -u once (with timeout guard).
+    4. Rotate logs (keep last 10, gzip older).
+    5. Set env (normal mode quiet, debug mode verbose) and exec wine64 Mars.exe, tee all output to log file.
+    6. On nonzero exit, append exit code + tail to log and show notification with log path. Never delete the failing log.
+  Env normal:
+    WINEPREFIX=<prefix> WINEDLLOVERRIDES=steam_api64=n,b MMCS=1
+    MTL_HUD_ENABLED=0 WINEDEBUG=+seh,+err,+loaddll
+    DXMT / D3DMetal defaults from GPTK (no override unless diagnosed).
+  Env debug (--debug):
+    WINEDEBUG=+timestamp,+pid,+seh,+err,+loaddll,+d3d12 MTL_DEBUG_LAYER=1 MTL_HUD_ENABLED=1
+
+7. LOGGING SPEC (diagnose without re-running)
+  Each log head: date, sw_vers, chip (M6), metal version, gptk version (3.0-3), wine binary path, game path + file size, prefix path, env dump (WINEDEBUG, MTL flags), command line.
+  Body: full wine stdout/stderr.
+  Tail: exit code, last-error excerpt (first err: and last 50 lines duplicated), prefix disk free, list of overrides.
+  Naming: launch-YYYYMMDD-HHMMSS.log. latest.log points to newest. Old logs beyond 10 compressed to .gz.
+  Crash extras on failure: copy system.reg/user.reg diff is out of scope; instead record wineserver status and whether prefix drive_c is intact.
+
+8. BUILD PLAN
+  Phase A - spec doc (this file). Done when file exists and user confirms.
+  Phase B - skeleton + launcher (no wine boot yet): create dirs, write launch.sh, wrapper.conf, Info.plist, placeholder icon, chmod +x, shellcheck/sh -n pass.
+  Phase C - prefix boot (guarded): WINEPREFIX=<prefix> wine64 wineboot -u with 300 s timeout, verify drive_c + system.reg exist. Then install vc_redist.x64.exe /quiet /norestart once, log to vc-install.log.
+  Phase D - first launch test: normal-mode launch Mars.exe with 120 s timeout, capture log, classify outcome (menu visible / black screen / crash with code). No gameplay required for pass.
+  Phase E - polish: real icon, Dock name, Retina default (borderless window), Cmd-Q mapping note, saves symlink, README-how-to-run.
+
+9. TEST PLAN AND ACCEPTANCE
+  T1 cold start from Finder with no terminal: pass = window appears, log written, exit 0 on clean quit.
+  T2 missing-drive test (rename mount check): pass = dialog + log with exit 10.
+  T3 save persistence: launch, check RUNE save dir created, quit, relaunch, dir still there.
+  T4 crash path: kill -9 wine mid-run or force bad game path: pass = nonzero exit preserved in log tail + notification shows path.
+  T5 debug flag: launch.sh --debug produces larger log containing d3d12 lines.
+  Acceptance: T1 + T3 + T4 pass. T2 and T5 pass before calling logging complete.
+
+10. RISKS
+  R1 GPTK 3.0-3 on macOS 27.2: newest OS, possible breakage. Mitigation: keep Porting Kit 6.7.0 as fallback, log GPTK version in every run.
+  R2 DLSS dll on Apple GPU: may warn or fall back. Mitigation: select XeSS or native in-game; do not delete nvngx_dlss.dll until diagnosed.
+  R3 exFAT quirks: no symlinks, slow random reads for 8.8 GB Packs. Mitigation: prefix internal; if stutter, copy game to internal (needs 11 GB, only 27 GB free, tight but possible).
+  R4 Old brew wine shadowing PATH: mitigation: launcher uses absolute GPTK wine path, never bare wine64.
+  R5 Bink movies (Movies/ 599 MB) black screen: mitigation: test windowed + log for mfplat/wmcodecs errors; add mf install only if log says so.
+
+11. OPEN QUESTIONS FOR USER
+  Q1 Windowed or fullscreen default?
+  Q2 Copy 11 GB game to internal SSD for speed, or keep on External?
+  Q3 Keep MarsDebug.exe path in launcher menu for future diagnosis?
+
+Next action after spec approval: build Phase B skeleton, then Phase C prefix boot.

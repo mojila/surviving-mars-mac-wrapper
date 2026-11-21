@@ -1,0 +1,18 @@
+Surviving Mars wrapper - TEST RESULTS 2026-11-21
+
+Phase C prefix boot: PASS
+  WINEPREFIX=~/Library/Application Support/SurvivingMars/prefix, GPTK 3.0-3 wine64 wineboot -u, exit 0. system.reg present.
+
+vc_redist.x64.exe /quiet /norestart: PASS exit 0, log vc-install.log (empty = quiet success).
+
+Phase D first launch (Mars.exe, 90 s timeout): PASS
+  Exit 124 = game stayed alive full 90 s, no crash. Log first-launch-test.log (9119 lines).
+  Only benign lines: D3D12 Dred debug-layer warning, kerberos/ntlm missing (offline OK), PdxSDK autologin NoSessionTokenFound (offline OK).
+  Tail wineserver-crashed line is the timeout kill, not a game crash.
+  RUNE save dir prefix/drive_c/users/Public/Documents/Steam/RUNE/3215050 created by the run.
+
+Left for user:
+  Double-click test (launch.sh blocks while game runs, so run from Finder).
+  In-game: pick XeSS or native, not DLSS (no NVIDIA on M6).
+  If stutter from USB exFAT, consider copying 11 GB game to internal (27 GB free, tight).
+  Launcher will convert RUNE save dir to symlink -> ~/Library/Application Support/SurvivingMars/saves on first launch.sh run.

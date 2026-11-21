@@ -1,0 +1,36 @@
+# Legal safety: never commit game files, only wrapper scripts/docs.
+# Binaries and game data
+*.exe
+*.dll
+*.fpk
+*.pak
+*.bin
+*.dat
+*.md5
+steam_emu.ini
+steam_api*.dll
+*.rne
+unins000.*
+
+# Game directories (FitGirl/repack layout)
+Packs/
+Movies/
+DLC/
+ModTools/
+Licenses/
+Local/
+_Redist/
+
+# Local runtime state (prefix, saves, logs, real config)
+prefix/
+saves/
+*.log
+*.log.gz
+wrapper.conf
+Library/
+
+# macOS noise
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
