@@ -131,22 +131,20 @@ if [ ! -L "$RUNE_DIR" ]; then
 fi
 
 # real Paradox saves live here (per Wine user), NOT in the RUNE stub above:
-#   <prefix>/drive_c/users/*/Saved Games/Surviving Mars Relaunched
-# keep them in $SUPPORT/savegames so they survive prefix rebuilds (idempotent)
+#   <prefix>/drive_c/users/crossover/Saved Games/Surviving Mars Relaunched
+# Pinned exact path on purpose: never fuzzy-find this name, because Temp/
+# and AppData/Roaming/ contain same-named dirs that must NOT be touched.
 REAL_DST="$SUPPORT/savegames"
+SAVEDIR="$PREFIX/drive_c/users/crossover/Saved Games/Surviving Mars Relaunched"
 mkdir -p "$REAL_DST"
-EXISTING=$(find "$PREFIX/drive_c/users" -maxdepth 4 -type d -name "Surviving Mars Relaunched" 2>/dev/null | head -n 1)
-if [ -z "$EXISTING" ]; then
-  EXISTING="$PREFIX/drive_c/users/crossover/Saved Games/Surviving Mars Relaunched"
-fi
-if [ ! -L "$EXISTING" ]; then
-  mkdir -p "$(dirname "$EXISTING")" "$REAL_DST"
-  if [ -d "$EXISTING" ]; then
-    cp -R "$EXISTING/." "$REAL_DST/" 2>/dev/null || true
-    rm -rf "$EXISTING"
+if [ ! -L "$SAVEDIR" ]; then
+  mkdir -p "$(dirname "$SAVEDIR")" "$REAL_DST"
+  if [ -d "$SAVEDIR" ]; then
+    cp -R "$SAVEDIR/." "$REAL_DST/" 2>/dev/null || true
+    rm -rf "$SAVEDIR"
   fi
-  ln -sfn "$REAL_DST" "$EXISTING"
-  [ "$DEBUG" -eq 1 ] && echo "savegames linked: $EXISTING -> $REAL_DST" >&2
+  ln -sfn "$REAL_DST" "$SAVEDIR"
+  [ "$DEBUG" -eq 1 ] && echo "savegames linked: $SAVEDIR -> $REAL_DST" >&2
 fi
 
 # the game requires its own folder as working directory (else exit 255)
