@@ -136,7 +136,14 @@ fi
 # and AppData/Roaming/ contain same-named dirs that must NOT be touched.
 REAL_DST="$SUPPORT/savegames"
 SAVEDIR="$PREFIX/drive_c/users/crossover/Saved Games/Surviving Mars Relaunched"
-mkdir -p "$REAL_DST"
+# SAVES_REALDIR=1 (in wrapper.conf) keeps SAVEDIR as a real dir instead of a
+# symlink — diagnostic mode for testing whether the game lists saves through
+# a symlink. With a real dir, sync prefix -> SUPPORT after a successful run.
+if [ "${SAVES_REALDIR:-0}" = 1 ]; then
+  mkdir -p "$SAVEDIR" "$REAL_DST"
+  [ "$DEBUG" -eq 1 ] && echo "saves real-dir mode: $SAVEDIR (no symlink)" >&2
+else
+  mkdir -p "$REAL_DST"
 if [ ! -L "$SAVEDIR" ]; then
   mkdir -p "$(dirname "$SAVEDIR")" "$REAL_DST"
   if [ -d "$SAVEDIR" ]; then
@@ -145,6 +152,7 @@ if [ ! -L "$SAVEDIR" ]; then
   fi
   ln -sfn "$REAL_DST" "$SAVEDIR"
   [ "$DEBUG" -eq 1 ] && echo "savegames linked: $SAVEDIR -> $REAL_DST" >&2
+fi
 fi
 
 # the game requires its own folder as working directory (else exit 255)
