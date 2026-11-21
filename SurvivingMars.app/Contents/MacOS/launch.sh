@@ -130,6 +130,25 @@ if [ ! -L "$RUNE_DIR" ]; then
   [ "$DEBUG" -eq 1 ] && echo "saves linked: $RUNE_DIR -> $SAVES" >&2
 fi
 
+# real Paradox saves live here (per Wine user), NOT in the RUNE stub above:
+#   <prefix>/drive_c/users/*/Saved Games/Surviving Mars Relaunched
+# keep them in $SUPPORT/savegames so they survive prefix rebuilds (idempotent)
+REAL_DST="$SUPPORT/savegames"
+mkdir -p "$REAL_DST"
+EXISTING=$(find "$PREFIX/drive_c/users" -maxdepth 4 -type d -name "Surviving Mars Relaunched" 2>/dev/null | head -n 1)
+if [ -z "$EXISTING" ]; then
+  EXISTING="$PREFIX/drive_c/users/crossover/Saved Games/Surviving Mars Relaunched"
+fi
+if [ ! -L "$EXISTING" ]; then
+  mkdir -p "$(dirname "$EXISTING")" "$REAL_DST"
+  if [ -d "$EXISTING" ]; then
+    cp -R "$EXISTING/." "$REAL_DST/" 2>/dev/null || true
+    rm -rf "$EXISTING"
+  fi
+  ln -sfn "$REAL_DST" "$EXISTING"
+  [ "$DEBUG" -eq 1 ] && echo "savegames linked: $EXISTING -> $REAL_DST" >&2
+fi
+
 # the game requires its own folder as working directory (else exit 255)
 cd "$GAME_DIR" || fail "cannot cd to game dir: $GAME_DIR" 13
 
