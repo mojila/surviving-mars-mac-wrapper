@@ -29,7 +29,20 @@ Run
   Normal:  SurvivingMars.app (double-click) or Contents/MacOS/launch.sh
   Verbose: Contents/MacOS/launch.sh --debug
   Settings (game folder, log folder): Contents/MacOS/launch.sh --settings
+  Skip mouse fix for one run: Contents/MacOS/launch.sh --no-mouse-fix
   If the game folder is missing at launch, a picker dialog asks you to locate it.
+
+Mouse clicks miss or nothing highlights
+  The wrapper applies the GPTK/winemac equivalent of the winecfg mouse
+  fixes on every launch (registry: Mac Driver RetinaMode=N,
+  CaptureDisplaysForFullscreen=Y, DirectInput MouseWarpOverride=force).
+  If the cursor hitbox is vertically offset, press Alt+Enter or set
+  Options > Video > Display Mode to Windowed/Borderless — the hitbox
+  realigns immediately. If nothing highlights at all, relaunch (the
+  focus-grab keys apply at startup). Proton Experimental / GE-Proton and
+  Gamescope are Steam-on-Linux fixes and do not apply to this macOS
+  GPTK wrapper. Overrides live in wrapper.conf (MOUSE_FIX, RETINA_MODE,
+  CAPTURE_FULLSCREEN, MOUSE_WARP).
 
 Logs
   ~/Library/Logs/SurvivingMars/launch-YYYYMMDD-HHMMSS.log (+ latest.log symlink).

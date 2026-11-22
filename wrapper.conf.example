@@ -1,4 +1,10 @@
 # wrapper.conf - user overrides, sourced by launch.sh
 # Uncomment and edit if paths change:
-# GAME_DIR="/Volumes/External/Surviving Mars - Relaunched/Surviving Mars - Relaunched"
+# GAME_DIR="/Users/ajilaksono/Games/Surviving Mars - Relaunched/Surviving Mars - Relaunched"
 # WINE_BIN="/Applications/Game Porting Toolkit.app/Contents/Resources/wine/bin/wine64"
+#
+# Click/cursor fixes (defaults are the recommended values; uncomment to change):
+# MOUSE_FIX=1             # 0 disables the cursor-hitbox/focus registry fix
+# RETINA_MODE=N           # N fixes vertical click offset on Retina/HiDPI; Y re-enables scaling
+# CAPTURE_FULLSCREEN=Y    # keeps mouse focus grabbed in fullscreen windows
+# MOUSE_WARP=force        # DirectInput MouseWarpOverride (force|disable|enable)

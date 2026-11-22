@@ -1,9 +1,20 @@
 #!/bin/bash
 # SurvivingMars wrapper launcher - GPTK 3.0-3 + D3DMetal
 # Spec: ~/Documents/SurvivingMars-Wrapper/SPEC-PLAN.txt
-# Usage: launch.sh [--debug] [--settings]
+# Usage: launch.sh [--debug] [--settings] [--no-mouse-fix]
 #   --debug     verbose Wine/D3D output to stderr (run from Terminal to see it)
 #   --settings  open settings UI (game folder), then exit
+#   --no-mouse-fix  skip the cursor-hitbox/focus registry fix for this run
+#
+# Clicks miss in fullscreen? Two known Wine causes, both handled here:
+#   1. Cursor hitbox vertically offset (fullscreen scaling mismatch):
+#      fastest in-game fix is Alt+Enter (toggle Windowed) or
+#      Options > Video > Display Mode > Windowed/Borderless. The registry
+#      fix below (RetinaMode=N) removes the macOS HiDPI scaling offset.
+#   2. Zero highlights/clicks anywhere (focus loss): the registry fix
+#      enables CaptureDisplaysForFullscreen + DirectInput MouseWarpOverride,
+#      the GPTK/winemac equivalent of winecfg's "Automatically capture the
+#      mouse in full-screen windows". No Proton/Gamescope on macOS.
 #
 # Note: this launcher intentionally keeps no log files. Normal runs are
 # silent (Wine output goes to /dev/null so it cannot fill the unified log).
@@ -11,7 +22,7 @@
 set -u
 
 WINE_BIN="/Applications/Game Porting Toolkit.app/Contents/Resources/wine/bin/wine64"
-GAME_DIR="/Volumes/External/Surviving Mars - Relaunched/Surviving Mars - Relaunched"
+GAME_DIR="/Users/ajilaksono/Games/Surviving Mars - Relaunched/Surviving Mars - Relaunched"
 SUPPORT="$HOME/Library/Application Support/SurvivingMars"
 PREFIX="$SUPPORT/prefix"
 SAVES="$SUPPORT/saves"
@@ -26,10 +37,19 @@ GAME_EXE="$GAME_DIR/Mars.exe"
 
 DEBUG=0
 SETTINGS=0
+MOUSE_FIX_OPT=1
 for a in "$@"; do
   [ "$a" = "--debug" ] && DEBUG=1
   [ "$a" = "--settings" ] && SETTINGS=1
+  [ "$a" = "--no-mouse-fix" ] && MOUSE_FIX_OPT=0
 done
+# wrapper.conf overrides (only if set there; defaults kept otherwise):
+#   MOUSE_FIX=0            disable the registry mouse/focus fix entirely
+#   RETINA_MODE=Y|N        winemac RetinaMode (default N: no HiDPI scaling,
+#                          fixes vertical cursor-hitbox offset)
+#   CAPTURE_FULLSCREEN=Y|N winemac CaptureDisplaysForFullscreen (default Y:
+#                          keeps mouse focus grabbed in fullscreen)
+#   MOUSE_WARP=force|disable|enable  DirectInput MouseWarpOverride (default force)
 
 mkdir -p "$SUPPORT"
 
@@ -38,6 +58,10 @@ save_conf() {
     echo "# wrapper.conf - managed by launch.sh --settings, edit by hand if needed"
     echo "GAME_DIR=\"$GAME_DIR\""
     echo "WINE_BIN=\"$WINE_BIN\""
+    echo "# MOUSE_FIX=1  (set 0 to disable cursor-hitbox/focus registry fix)"
+    echo "# RETINA_MODE=N  (Y re-enables HiDPI scaling; N fixes click offset)"
+    echo "# CAPTURE_FULLSCREEN=Y  (N disables fullscreen display capture)"
+    echo "# MOUSE_WARP=force  (DirectInput MouseWarpOverride)"
   } > "$CONF"
 }
 
@@ -115,6 +139,25 @@ if [ ! -f "$PREFIX/system.reg" ]; then
   fi
 fi
 
+# Cursor-hitbox / focus fix (idempotent, ~1 s). Replaces the manual winecfg
+# steps: winemac has no "virtual desktop" checkbox; these registry keys are
+# the equivalent. Never fatal: a failed reg write only warns in --debug.
+apply_mouse_fix() {
+  [ "${MOUSE_FIX:-1}" -eq 1 ] || { [ "$DEBUG" -eq 1 ] && echo "mouse fix disabled (MOUSE_FIX=0)" >&2; return 0; }
+  [ "$MOUSE_FIX_OPT" -eq 1 ] || { [ "$DEBUG" -eq 1 ] && echo "mouse fix skipped (--no-mouse-fix)" >&2; return 0; }
+  local retina="${RETINA_MODE:-N}" cap="${CAPTURE_FULLSCREEN:-Y}" warp="${MOUSE_WARP:-force}"
+  local out="/dev/null"
+  [ "$DEBUG" -eq 1 ] && out="/dev/stderr"
+  timeout 30 "$WINE_BIN" reg add "HKCU\\Software\\Wine\\Mac Driver" /v RetinaMode /d "$retina" /f >"$out" 2>&1 || \
+    { [ "$DEBUG" -eq 1 ] && echo "warn: RetinaMode reg write failed" >&2; }
+  timeout 30 "$WINE_BIN" reg add "HKCU\\Software\\Wine\\Mac Driver" /v CaptureDisplaysForFullscreen /d "$cap" /f >"$out" 2>&1 || \
+    { [ "$DEBUG" -eq 1 ] && echo "warn: CaptureDisplaysForFullscreen reg write failed" >&2; }
+  timeout 30 "$WINE_BIN" reg add "HKCU\\Software\\Wine\\DirectInput" /v MouseWarpOverride /d "$warp" /f >"$out" 2>&1 || \
+    { [ "$DEBUG" -eq 1 ] && echo "warn: MouseWarpOverride reg write failed" >&2; }
+  [ "$DEBUG" -eq 1 ] && echo "mouse fix applied: RetinaMode=$retina CaptureDisplaysForFullscreen=$cap MouseWarpOverride=$warp" >&2
+}
+apply_mouse_fix
+
 # saves symlink: prefix RUNE dir -> $SAVES (idempotent)
 RUNE_DIR="$PREFIX/drive_c/users/Public/Documents/Steam/RUNE/3215050"
 if [ ! -L "$RUNE_DIR" ]; then
@@ -158,12 +201,12 @@ fi
 # the game requires its own folder as working directory (else exit 255)
 cd "$GAME_DIR" || fail "cannot cd to game dir: $GAME_DIR" 13
 
-[ "$DEBUG" -eq 1 ] && echo "launching: $GAME_EXE" >&2
+[ "$DEBUG" -eq 1 ] && echo "launching: $GAME_EXE --disableMods --noWorkshop" >&2
 if [ "$DEBUG" -eq 1 ]; then
-  "$WINE_BIN" "$GAME_EXE"
+  "$WINE_BIN" "$GAME_EXE" --disableMods --noWorkshop
   CODE=$?
 else
-  "$WINE_BIN" "$GAME_EXE" >/dev/null 2>&1
+  "$WINE_BIN" "$GAME_EXE" --disableMods --noWorkshop >/dev/null 2>&1
   CODE=$?
 fi
 
