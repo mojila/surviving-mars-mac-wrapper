@@ -38,11 +38,17 @@ GAME_EXE="$GAME_DIR/Mars.exe"
 DEBUG=0
 SETTINGS=0
 MOUSE_FIX_OPT=1
+USE_DEBUG_EXE=0
 for a in "$@"; do
   [ "$a" = "--debug" ] && DEBUG=1
   [ "$a" = "--settings" ] && SETTINGS=1
   [ "$a" = "--no-mouse-fix" ] && MOUSE_FIX_OPT=0
+  [ "$a" = "--mars-debug" ] && USE_DEBUG_EXE=1
 done
+# --mars-debug runs MarsDebug.exe (debug build: asserts on, Lua console on
+# Enter) instead of Mars.exe. Used for console cheats like force-enabling
+# LOAD GAME or LoadGame("name.savegame.sav") by hand.
+[ "$USE_DEBUG_EXE" -eq 1 ] && GAME_EXE="$GAME_DIR/MarsDebug.exe"
 # wrapper.conf overrides (only if set there; defaults kept otherwise):
 #   MOUSE_FIX=0            disable the registry mouse/focus fix entirely
 #   RETINA_MODE=Y|N        winemac RetinaMode (default N: no HiDPI scaling,
